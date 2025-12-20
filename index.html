@@ -3,353 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WAR GROUNDS | Tactical FPS</title>
+    <title>WAR GROUNDS | Tactical Day-Ops</title>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --military-green: #4b5320;
-            --warn-orange: #ff8c00;
-            --danger-red: #8b0000;
-            --ui-text: #e0e0e0;
-            --joystick-bg: rgba(255, 255, 255, 0.2);
-        }
+        :root { --m-green: #4b5320; --orange: #ff8c00; --red: #8b0000; --sky: #87CEEB; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--sky); font-family: 'Roboto Mono', monospace; touch-action: none; }
+        canvas { position: fixed; top: 0; left: 0; z-index: 1; }
+        
+        /* UI SCREENS */
+        .screen { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; background: rgba(255,255,255,0.85); }
+        .card { background: #fff; padding: 25px; border: 3px solid var(--m-green); width: 85%; max-width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .btn { width: 100%; padding: 15px; margin-top: 10px; background: var(--m-green); color: white; border: none; font-family: 'Black Ops One'; font-size: 18px; cursor: pointer; }
+        
+        /* HUD */
+        #crosshair { position: fixed; top: 50%; left: 50%; width: 22px; height: 22px; border: 2px solid #ff0000; border-radius: 50%; transform: translate(-50%, -50%); z-index: 100; display: none; pointer-events: none; }
+        #crosshair::after { content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: #ff0000; transform: translate(-50%, -50%); border-radius: 50%; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 15px; display: none; justify-content: space-between; pointer-events: none; z-index: 100; box-sizing: border-box; }
+        #hp-bar { width: 120px; height: 12px; background: #ddd; border: 1px solid #000; margin-top:5px; }
+        #hp-fill { width: 100%; height: 100%; background: #44ff44; transition: 0.2s; }
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background-color: #050505;
-            font-family: 'Roboto Mono', monospace; color: var(--ui-text);
-            touch-action: none;
-        }
+        /* LEADERBOARD */
+        #l-board { margin-top: 15px; text-align: left; background: #f0f0f0; padding: 8px; border: 1px solid #ccc; font-size: 11px; }
+        .l-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 4px 0; }
 
-        /* --- SCREENS --- */
-        .screen {
-            position: absolute; width: 100%; height: 100%;
-            display: none; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 1000; background: rgba(0,0,0,0.9);
-        }
-
-        .card {
-            background: #151515; padding: 30px; border: 2px solid var(--military-green);
-            width: 90%; max-width: 400px; text-align: center; box-shadow: 0 0 40px #000;
-        }
-
-        input {
-            width: 100%; padding: 12px; margin: 10px 0;
-            background: #000; border: 1px solid var(--military-green);
-            color: white; font-family: 'Roboto Mono'; box-sizing: border-box;
-        }
-
-        .btn {
-            width: 100%; padding: 15px; margin-top: 10px;
-            background: var(--military-green); color: white;
-            border: none; cursor: pointer; font-family: 'Black Ops One';
-            letter-spacing: 2px; font-size: 18px;
-        }
-
-        /* --- LEADERBOARD --- */
-        #leaderboard {
-            margin-top: 20px; text-align: left; background: rgba(0,0,0,0.4);
-            padding: 10px; border: 1px solid #333; font-size: 12px;
-        }
-        .leader-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 3px 0; }
-
-        /* --- TOUCH UI (VISIBLE) --- */
-        #mobile-ui {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: none; z-index: 500;
-        }
-
-        #joystick-zone {
-            position: absolute; bottom: 50px; left: 50px;
-            width: 150px; height: 150px; background: var(--joystick-bg);
-            border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: auto;
-        }
-
-        #joystick-knob {
-            position: absolute; top: 50px; left: 50px;
-            width: 50px; height: 50px; background: var(--military-green);
-            border-radius: 50%; box-shadow: 0 0 10px #000;
-        }
-
-        .action-btn {
-            position: absolute; width: 80px; height: 80px;
-            border-radius: 50%; font-family: 'Black Ops One';
-            display: flex; justify-content: center; align-items: center;
-            pointer-events: auto; color: white; user-select: none;
-            border: 3px solid rgba(255,255,255,0.2);
-        }
-
-        #btn-fire { bottom: 60px; right: 50px; background: var(--danger-red); width: 100px; height: 100px; }
-        #btn-jump { bottom: 180px; right: 70px; background: var(--military-green); width: 70px; height: 70px; font-size: 12px; }
-
-        /* --- HUD --- */
-        #hud {
-            position: absolute; top: 0; left: 0; width: 100%;
-            padding: 20px; display: none; justify-content: space-between;
-            pointer-events: none; z-index: 100; box-sizing: border-box;
-        }
-        .hud-item { background: rgba(0,0,0,0.8); border: 2px solid var(--military-green); padding: 10px; }
-        #hp-bar { width: 150px; height: 10px; background: #222; margin-top: 5px; }
-        #hp-fill { width: 100%; height: 100%; background: var(--warn-orange); transition: 0.1s; }
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 20px; height: 20px;
-            border: 2px solid #00ff00; border-radius: 50%; transform: translate(-50%, -50%);
-            display: none; pointer-events: none;
-        }
+        /* MOBILE CONTROLS */
+        #mobile-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 500; }
+        #joy-zone { position: absolute; bottom: 30px; left: 40px; width: 110px; height: 110px; background: rgba(0,0,0,0.1); border: 2px solid rgba(0,0,0,0.2); border-radius: 50%; pointer-events: auto; }
+        #joy-knob { position: absolute; top: 30px; left: 30px; width: 50px; height: 50px; background: var(--m-green); border-radius: 50%; }
+        .act-btn { position: absolute; border-radius: 50%; font-family: 'Black Ops One'; display: flex; justify-content: center; align-items: center; pointer-events: auto; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); user-select: none; }
+        #btn-f { bottom: 40px; right: 40px; background: var(--red); width: 90px; height: 90px; }
+        #btn-j { bottom: 140px; right: 45px; background: var(--m-green); width: 60px; height: 60px; font-size: 12px; }
+        #btn-s { bottom: 40px; right: 145px; background: var(--orange); width: 65px; height: 65px; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div id="auth-overlay" class="screen" style="display: flex;">
     <div class="card">
-        <h2 id="auth-title" style="font-family: 'Black Ops One'; color: var(--warn-orange);">ACCESS POINT</h2>
-        <input type="email" id="email" placeholder="OPERATOR EMAIL">
-        <input type="password" id="password" placeholder="SECURITY KEY">
-        <button class="btn" id="auth-btn">LOGIN</button>
-        <p id="toggle-auth" style="font-size: 11px; margin-top: 15px; cursor: pointer; color: #888;">NEW RECRUIT? REGISTER</p>
+        <h2 style="font-family: 'Black Ops One'; color: var(--m-green);">WAR GROUNDS</h2>
+        <input type="email" id="email" placeholder="OPERATOR EMAIL" style="width:100%; padding:10px; margin:5px 0; box-sizing:border-box;">
+        <input type="password" id="pass" placeholder="SECURITY KEY" style="width:100%; padding:10px; margin:5px 0; box-sizing:border-box;">
+        <button class="btn" id="login-btn">ENLIST / LOGIN</button>
     </div>
 </div>
 
 <div id="main-menu" class="screen">
-    <h1 style="font-family: 'Black Ops One'; font-size: 40px; color: var(--warn-orange); margin: 0;">WAR GROUNDS</h1>
-    <p id="user-tag" style="font-size: 12px; color: #666; margin-bottom: 20px;"></p>
     <div class="card">
+        <h2 id="user-tag" style="font-size:14px; margin-bottom:10px; color: var(--m-green);"></h2>
         <button class="btn" id="deploy-btn">DEPLOY TO FIELD</button>
-        <div id="leaderboard">
-            <p style="text-align: center; font-weight: bold; color: var(--warn-orange);">HIGH COMMAND LEADERBOARD</p>
-            <div id="leader-entries"></div>
+        <div id="l-board">
+            <p style="text-align:center; color:var(--m-green); font-weight: bold; margin:0;">GLOBAL RANKINGS</p>
+            <div id="l-entries"></div>
         </div>
+        <p onclick="localStorage.removeItem('wg_session'); location.reload();" style="cursor:pointer; font-size:10px; color:var(--red); margin-top:15px; font-weight:bold;">LOGOUT</p>
     </div>
-    <p onclick="logout()" style="color:var(--danger-red); cursor:pointer; font-size:11px; margin-top:20px;">ABANDON MISSION (LOGOUT)</p>
 </div>
 
-<div id="hud">
-    <div class="hud-item">SCORE: <span id="score-val" style="color: var(--warn-orange);">0</span></div>
-    <div class="hud-item">HP <div id="hp-bar"><div id="hp-fill"></div></div></div>
-</div>
 <div id="crosshair"></div>
+<div id="hud">
+    <div style="background:rgba(255,255,255,0.9); padding:10px; border: 2px solid var(--m-green); font-weight:bold;">SCORE: <span id="score-val">0</span></div>
+    <div style="background:rgba(255,255,255,0.9); padding:10px; border: 2px solid var(--m-green); font-weight:bold;">
+        CONDITION
+        <div id="hp-bar"><div id="hp-fill"></div></div>
+    </div>
+</div>
 
 <div id="mobile-ui">
-    <div id="joystick-zone"><div id="joystick-knob"></div></div>
-    <div id="btn-fire" class="action-btn">FIRE</div>
-    <div id="btn-jump" class="action-btn">JUMP</div>
+    <div id="joy-zone"><div id="joy-knob"></div></div>
+    <div id="btn-f" class="act-btn">FIRE</div>
+    <div id="btn-j" class="act-btn">JUMP</div>
+    <div id="btn-s" class="act-btn">SPRINT</div>
 </div>
 
-<div id="game-over" class="screen">
-    <h1 style="font-family: 'Black Ops One'; font-size: 80px; color: var(--danger-red);">K.I.A.</h1>
-    <button class="btn" style="width: 200px;" onclick="returnToLobby()">RETURN TO BASE</button>
+<div id="game-over" class="screen" style="background: rgba(139,0,0,0.95);">
+    <h1 style="font-family: 'Black Ops One'; color: #fff; font-size: 80px; margin: 0;">K.I.A.</h1>
+    <div class="card">
+        <button class="btn" style="background: var(--red);" onclick="location.reload()">RE-DEPLOY</button>
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/PointerLockControls.js"></script>
 
 <script>
-    // --- 1. INITIALIZATION & AUTH ---
+    let scene, camera, renderer, controls, raycaster;
     let isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    let isLogin = true;
-    const authBtn = document.getElementById('auth-btn');
+    let moveF=0, moveB=0, moveL=0, moveR=0, moveSprint=0, canJump=false;
+    let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
+    let score=0, health=100, isGameOver=false, enemies=[], collidables=[], enemyTex;
+    let prevTime = performance.now();
 
+    // --- AUTH LOGIC ---
     window.onload = () => {
         const session = localStorage.getItem('wg_session');
         if(session) showLobby(session);
     };
 
-    document.getElementById('toggle-auth').onclick = () => {
-        isLogin = !isLogin;
-        document.getElementById('auth-title').innerText = isLogin ? "ACCESS POINT" : "ENLISTMENT";
-        authBtn.innerText = isLogin ? "LOGIN" : "SIGN UP";
-    };
-
-    authBtn.onclick = () => {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-        if(!email || !pass) return alert("Credentials required");
+    document.getElementById('login-btn').onclick = () => {
+        const e = document.getElementById('email').value, p = document.getElementById('pass').value;
+        if(!e || !p) return;
         let db = JSON.parse(localStorage.getItem('wg_db')) || [];
-
-        if(isLogin) {
-            const user = db.find(u => u.email === email && u.pass === pass);
-            if(user) { localStorage.setItem('wg_session', email); showLobby(email); }
-            else alert("Invalid Access");
-        } else {
-            if(db.some(u => u.email === email)) return alert("Operator Exists");
-            db.push({email, pass, score: 0});
-            localStorage.setItem('wg_db', JSON.stringify(db));
-            alert("Enlisted. Now Login.");
-            document.getElementById('toggle-auth').click();
-        }
+        if(!db.find(x => x.email === e)) db.push({email:e, pass:p, score:0});
+        localStorage.setItem('wg_db', JSON.stringify(db));
+        localStorage.setItem('wg_session', e);
+        showLobby(e);
     };
 
     function showLobby(email) {
-        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-        document.getElementById('main-menu').style.display = 'flex';
-        document.getElementById('user-tag').innerText = "IDENTIFIED: " + email;
-        updateLeaderboard();
-        if(!scene) initGame();
-    }
-
-    function updateLeaderboard() {
+        document.querySelectorAll('.screen').forEach(s => s.style.display='none');
+        document.getElementById('main-menu').style.display='flex';
+        document.getElementById('user-tag').innerText = "OPERATOR: " + email.toUpperCase();
         const db = JSON.parse(localStorage.getItem('wg_db')) || [];
         const top = db.sort((a,b) => b.score - a.score).slice(0, 5);
-        document.getElementById('leader-entries').innerHTML = top.map((u, i) => `
-            <div class="leader-row"><span>${i+1}. ${u.email.split('@')[0]}</span><span>${u.score}</span></div>
-        `).join('');
+        document.getElementById('l-entries').innerHTML = top.map((u,i)=>`<div class="l-row"><span>${i+1}. ${u.email.split('@')[0]}</span><span>${u.score}</span></div>`).join('');
+        if(!scene) init();
     }
 
-    function logout() { localStorage.removeItem('wg_session'); location.reload(); }
-
-    // --- 2. GAME ENGINE ---
-    let scene, camera, renderer, controls, raycaster;
-    let moveF = 0, moveB = 0, moveL = 0, moveR = 0, canJump = false;
-    let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
-    let prevTime = performance.now(), score = 0, health = 100, isGameOver = false;
-    let enemies = [], enemyTexture;
-
-    function initGame() {
+    // --- ENGINE ---
+    function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0b10);
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 100, 1000);
+        
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 1500);
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         controls = new THREE.PointerLockControls(camera, document.body);
         scene.add(controls.getObject());
+        controls.getObject().position.set(0, 12, 0);
 
-        const tl = new THREE.TextureLoader();
-        enemyTexture = tl.load('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=128&q=60');
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        sun.position.set(100, 200, 100);
+        scene.add(sun);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-        scene.add(new THREE.GridHelper(2000, 50, 0x4b5320, 0x111111));
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({color: 0x050505}));
-        ground.rotation.x = -Math.PI/2;
+        // Ground + Walls
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({color: 0x999999}));
+        ground.rotation.x = -Math.PI / 2;
         scene.add(ground);
+        scene.add(new THREE.GridHelper(2000, 80, 0x000000, 0x555555));
+
+        const wallMat = new THREE.MeshStandardMaterial({color: 0x333333});
+        const walls = [{p:[0, 50, 1000], s:[2000, 100, 10]}, {p:[0, 50, -1000], s:[2000, 100, 10]}, {p:[1000, 50, 0], s:[10, 100, 2000]}, {p:[-1000, 50, 0], s:[10, 100, 2000]}];
+        walls.forEach(w => { const m = new THREE.Mesh(new THREE.BoxGeometry(w.s[0], w.s[1], w.s[2]), wallMat); m.position.set(w.p[0], w.p[1], w.p[2]); scene.add(m); });
+
+        // Environment Props
+        const crateGeo = new THREE.BoxGeometry(20, 20, 20), pillarGeo = new THREE.CylinderGeometry(10, 10, 80, 8);
+        const crateMat = new THREE.MeshStandardMaterial({color: 0x4b5320}), pillarMat = new THREE.MeshStandardMaterial({color: 0x666666});
+        for(let i=0; i<60; i++) {
+            const isPillar = Math.random() > 0.7;
+            const obj = new THREE.Mesh(isPillar ? pillarGeo : crateGeo, isPillar ? pillarMat : crateMat);
+            const x = (Math.random()-0.5)*1500, z = (Math.random()-0.5)*1500;
+            if(Math.abs(x)<80 && Math.abs(z)<80) continue;
+            obj.position.set(x, isPillar ? 40 : 10, z);
+            scene.add(obj);
+            collidables.push({ x, z, rad: isPillar ? 10 : 13 });
+        }
+
+        enemyTex = new THREE.TextureLoader().load('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=128&q=60');
         raycaster = new THREE.Raycaster();
 
         document.getElementById('deploy-btn').onclick = () => {
             if(!isTouch) controls.lock();
-            startGame();
+            document.getElementById('main-menu').style.display='none';
+            document.getElementById('hud').style.display='flex';
+            document.getElementById('crosshair').style.display='block';
+            if(isTouch) document.getElementById('mobile-ui').style.display='block';
         };
 
-        // Input Bindings
+        if(isTouch) setupTouch();
         document.addEventListener('keydown', (e) => {
             if(e.code==='KeyW') moveF=1; if(e.code==='KeyS') moveB=1;
             if(e.code==='KeyA') moveL=1; if(e.code==='KeyD') moveR=1;
-            if(e.code==='Space' && canJump){ velocity.y += 250; canJump=false; }
+            if(e.code==='KeyR') moveSprint=1;
+            if(e.code==='Space' && canJump){ velocity.y+=250; canJump=false; }
         });
         document.addEventListener('keyup', (e) => {
             if(e.code==='KeyW') moveF=0; if(e.code==='KeyS') moveB=0;
             if(e.code==='KeyA') moveL=0; if(e.code==='KeyD') moveR=0;
+            if(e.code==='KeyR') moveSprint=0;
         });
-        window.addEventListener('mousedown', () => { if(!isTouch) shoot(); });
-
-        if(isTouch) setupMobile();
+        window.addEventListener('mousedown', () => { if(!isGameOver && controls.isLocked) shoot(); });
         animate();
     }
 
-    function startGame() {
-        document.getElementById('main-menu').style.display = 'none';
-        document.getElementById('hud').style.display = 'flex';
-        document.getElementById('crosshair').style.display = 'block';
-        if(isTouch) document.getElementById('mobile-ui').style.display = 'block';
+    function handleCollisions() {
+        const pos = controls.getObject().position;
+        collidables.forEach(c => {
+            const dx = pos.x - c.x, dz = pos.z - c.z;
+            const dist = Math.sqrt(dx*dx + dz*dz), minDist = c.rad + 6;
+            if(dist < minDist) {
+                const overlap = minDist - dist;
+                pos.x += (dx/dist) * overlap; pos.z += (dz/dist) * overlap;
+            }
+        });
+        if(pos.x > 990) pos.x = 990; if(pos.x < -990) pos.x = -990;
+        if(pos.z > 990) pos.z = 990; if(pos.z < -990) pos.z = -990;
     }
 
-    function setupMobile() {
-        const knob = document.getElementById('joystick-knob');
-        const zone = document.getElementById('joystick-zone');
+    function setupTouch() {
+        const knob = document.getElementById('joy-knob'), zone = document.getElementById('joy-zone');
         zone.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = zone.getBoundingClientRect();
-            const cx = rect.left + 75, cy = rect.top + 75;
-            const dx = touch.clientX - cx, dy = touch.clientY - cy;
-            const dist = Math.min(50, Math.sqrt(dx*dx + dy*dy));
-            const angle = Math.atan2(dy, dx);
-            knob.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-            moveF = dy < -15 ? 1 : 0; moveB = dy > 15 ? 1 : 0;
-            moveL = dx < -15 ? 1 : 0; moveR = dx > 15 ? 1 : 0;
+            e.preventDefault(); const t = e.touches[0], r = zone.getBoundingClientRect();
+            const dx = t.clientX - (r.left + 55), dy = t.clientY - (r.top + 55);
+            const dist = Math.min(40, Math.sqrt(dx*dx+dy*dy)), ang = Math.atan2(dy, dx);
+            knob.style.transform = `translate(${Math.cos(ang)*dist}px, ${Math.sin(ang)*dist}px)`;
+            moveF = dy < -10 ? 1 : 0; moveB = dy > 10 ? 1 : 0;
+            moveL = dx < -10 ? 1 : 0; moveR = dx > 10 ? 1 : 0;
         });
-        zone.addEventListener('touchend', () => {
-            knob.style.transform = `translate(0,0)`;
-            moveF=moveB=moveL=moveR=0;
-        });
-
+        zone.addEventListener('touchend', () => { knob.style.transform='none'; moveF=moveB=moveL=moveR=0; });
         let lx, ly;
         window.addEventListener('touchmove', (e) => {
             const t = e.touches[0];
             if(t.clientX > window.innerWidth / 2) {
-                if(lx) {
-                    camera.rotation.y -= (t.clientX - lx) * 0.005;
-                    camera.rotation.x -= (t.clientY - ly) * 0.005;
-                }
+                if(lx) { camera.rotation.y -= (t.clientX - lx) * 0.006; camera.rotation.x -= (t.clientY - ly) * 0.006; camera.rotation.x = Math.max(-1.5, Math.min(1.5, camera.rotation.x)); }
                 lx = t.clientX; ly = t.clientY;
             }
         });
-        window.addEventListener('touchend', () => { lx = null; ly = null; });
-        document.getElementById('btn-fire').ontouchstart = (e) => { e.preventDefault(); shoot(); };
-        document.getElementById('btn-jump').ontouchstart = (e) => { e.preventDefault(); if(canJump){ velocity.y += 250; canJump=false; } };
+        window.addEventListener('touchend', () => { lx=null; ly=null; });
+        document.getElementById('btn-f').ontouchstart = (e) => { e.preventDefault(); shoot(); };
+        document.getElementById('btn-j').ontouchstart = (e) => { e.preventDefault(); if(canJump){velocity.y+=250; canJump=false;} };
+        document.getElementById('btn-s').ontouchstart = (e) => { e.preventDefault(); moveSprint=1; };
+        document.getElementById('btn-s').ontouchend = (e) => { e.preventDefault(); moveSprint=0; };
     }
 
     function shoot() {
-        if(isGameOver) return;
         raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
         const hits = raycaster.intersectObjects(enemies);
         if(hits.length > 0) {
             scene.remove(hits[0].object);
             enemies = enemies.filter(e => e !== hits[0].object);
-            score += 100;
-            document.getElementById('score-val').innerText = score;
+            score += 100; document.getElementById('score-val').innerText = score;
         }
-    }
-
-    function returnToLobby() {
-        const email = localStorage.getItem('wg_session');
-        let db = JSON.parse(localStorage.getItem('wg_db')) || [];
-        const uIdx = db.findIndex(u => u.email === email);
-        if(uIdx !== -1 && score > db[uIdx].score) db[uIdx].score = score;
-        localStorage.setItem('wg_db', JSON.stringify(db));
-        location.reload();
     }
 
     function animate() {
         requestAnimationFrame(animate);
-        const time = performance.now();
-        const delta = (time - prevTime) / 1000;
-
-        if (!isGameOver && (controls.isLocked || isTouch)) {
-            velocity.x -= velocity.x * 10.0 * delta;
-            velocity.z -= velocity.z * 10.0 * delta;
-            velocity.y -= 9.8 * 85.0 * delta;
-
-            direction.z = Number(moveF) - Number(moveB);
-            direction.x = Number(moveR) - Number(moveL);
-            direction.normalize();
-
-            if (moveF || moveB) velocity.z -= direction.z * 400.0 * delta;
-            if (moveL || moveR) velocity.x -= direction.x * 400.0 * delta;
-
-            controls.moveRight(-velocity.x * delta);
-            controls.moveForward(-velocity.z * delta);
+        const time = performance.now(), delta = (time - prevTime) / 1000;
+        if(!isGameOver && (controls.isLocked || isTouch)) {
+            velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta; velocity.y -= 9.8 * 85 * delta;
+            direction.z = Number(moveF) - Number(moveB); direction.x = Number(moveR) - Number(moveL); direction.normalize();
+            const speed = moveSprint ? 1200 : 600;
+            if(moveF || moveB) velocity.z -= direction.z * speed * delta;
+            if(moveL || moveR) velocity.x -= direction.x * speed * delta;
+            controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
+            handleCollisions();
             controls.getObject().position.y += (velocity.y * delta);
-
-            if (controls.getObject().position.y < 12) {
-                velocity.y = 0; controls.getObject().position.y = 12; canJump = true;
-            }
-
+            if(controls.getObject().position.y < 12) { velocity.y = 0; controls.getObject().position.y = 12; canJump = true; }
             if(Math.random() < 0.02) {
-                const en = new THREE.Mesh(new THREE.BoxGeometry(16,24,16), new THREE.MeshStandardMaterial({map: enemyTexture, emissive: 0xff0000, emissiveIntensity: 0.3}));
-                const a = Math.random() * Math.PI * 2;
-                en.position.set(Math.cos(a)*500, 12, Math.sin(a)*500);
+                const en = new THREE.Mesh(new THREE.BoxGeometry(16,24,16), new THREE.MeshStandardMaterial({map:enemyTex, emissive:0xff0000, emissiveIntensity:0.5}));
+                const a = Math.random()*Math.PI*2; en.position.set(Math.cos(a)*700, 12, Math.sin(a)*700);
                 scene.add(en); enemies.push(en);
             }
-
             enemies.forEach(e => {
                 const d = new THREE.Vector3().subVectors(camera.position, e.position).normalize();
-                e.position.x += d.x * 50 * delta; // DECREASED SPEED
-                e.position.z += d.z * 50 * delta; 
-                if(e.position.distanceTo(camera.position) < 20) {
-                    health -= 0.3; // DECREASED DAMAGE
-                    document.getElementById('hp-fill').style.width = Math.max(0, health) + "%";
-                    if(health <= 0) { isGameOver = true; document.getElementById('game-over').style.display = 'flex'; controls.unlock(); }
+                e.position.x += d.x*65*delta; e.position.z += d.z*65*delta;
+                if(e.position.distanceTo(camera.position) < 22) {
+                    health -= 0.8; document.getElementById('hp-fill').style.width = health+"%";
+                    if(health <= 0) {
+                        isGameOver = true; controls.unlock(); document.getElementById('game-over').style.display = 'flex';
+                        let db = JSON.parse(localStorage.getItem('wg_db'));
+                        const u = db.find(x => x.email === localStorage.getItem('wg_session'));
+                        if(score > u.score) u.score = score;
+                        localStorage.setItem('wg_db', JSON.stringify(db));
+                    }
                 }
             });
         }
